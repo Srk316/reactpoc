@@ -1,5 +1,5 @@
 import { Card, Input, Row, Col, Button, Typography, Pagination, Select } from "antd";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { gaEvent } from "../analytics";
 import { useFeatureTimer } from "../hooks/useFeatureTimer";
 
