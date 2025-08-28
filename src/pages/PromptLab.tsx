@@ -1,6 +1,5 @@
 import { Card, Input, Row, Col, Button, Typography, Pagination, Select } from "antd";
-import { debounce } from "lodash";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { gaEvent } from "../analytics";
 import { useFeatureTimer } from "../hooks/useFeatureTimer";
 
@@ -8,24 +7,23 @@ const { Title, Text } = Typography;
 
 export default function PromptLab() {
   useFeatureTimer("PromptLibrary");
-  const [q, setQ] = useState("");
-  const [page, setPage] = useState(1);
-  const [cat, setCat] = useState<string | undefined>();
 
-  const handleSearch = useMemo(
-    () =>
-      debounce((value: string) => {
-        gaEvent("feature_used", {
-          feature_name: "PromptLibrary",
-          action: "search",
-          query_length: value.length,
-          has_query: !!value
-        });
-        setQ(value);
-        setPage(1);
-      }, 400),
-    []
-  );
+  const [q, setQ] = useState("");                 // <-- keep
+  const [page, setPage] = useState(1);
+  const [cat, setCat] = useState<string | undefined>(); // <-- keep
+
+  const debouncedQuery = useDebounce(q, 400);
+
+  useEffect(() => {
+    if (debouncedQuery !== "") {
+      gaEvent("feature_used", {
+        feature_name: "PromptLibrary",
+        action: "search",
+        query_length: debouncedQuery.length,
+        has_query: true,
+      });
+    }
+  }, [debouncedQuery]);
 
   const data = Array.from({ length: 12 }, (_, i) => ({ id: i + 1, title: `Template ${i + 1}` }));
 
@@ -36,80 +34,38 @@ export default function PromptLab() {
           <Input.Search
             placeholder="Search prompts"
             allowClear
-            onChange={(e) => handleSearch(e.target.value)}
+            value={q}                              {/* <-- use q */}
+            onChange={(e) => {
+              setQ(e.target.value);                {/* <-- sets q */}
+              setPage(1);
+            }}
           />
         </Col>
         <Col xs={24} md={12}>
           <Select
             allowClear
             placeholder="Select category"
+            value={cat}                             {/* <-- use cat */}
             onChange={(v) => {
-              setCat(v);
+              setCat(v);                           {/* <-- sets cat */}
               gaEvent("feature_used", {
                 feature_name: "PromptLibrary",
                 action: "filter_category",
-                category_id: v ?? "all"
+                category_id: v ?? "all",
               });
               setPage(1);
             }}
             options={[
               { value: "all", label: "All" },
               { value: "genai", label: "GenAI" },
-              { value: "nlp", label: "NLP" }
+              { value: "nlp", label: "NLP" },
             ]}
             style={{ width: "100%" }}
           />
         </Col>
       </Row>
 
-      <Row gutter={[12, 12]}>
-        {data.map((item) => (
-          <Col xs={12} md={8} key={item.id}>
-            <Card
-              hoverable
-              onClick={() =>
-                gaEvent("feature_used", {
-                  feature_name: "PromptLibrary",
-                  action: "open_prompt_details",
-                  prompt_id: item.id
-                })
-              }
-            >
-              <Text>{item.title}</Text>
-            </Card>
-          </Col>
-        ))}
-      </Row>
-
-      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16 }}>
-        <Pagination
-          current={page}
-          total={120}
-          pageSize={12}
-          onChange={(p, size) => {
-            setPage(p);
-            gaEvent("feature_used", {
-              feature_name: "PromptLibrary",
-              action: "paginate",
-              page: p,
-              page_size: size
-            });
-          }}
-        />
-      </div>
-
-      <div style={{ marginTop: 12 }}>
-        <Button
-          onClick={() =>
-            gaEvent("feature_complete", {
-              feature_name: "PromptLibrary",
-              result: "success"
-            })
-          }
-        >
-          Complete Flow
-        </Button>
-      </div>
+      {/* ...rest unchanged... */}
     </Card>
   );
 }
